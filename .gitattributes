@@ -2,3 +2,4 @@
 * text=auto
 *.html linguist-detectable=false
 *.rmd linguist-language=R
+*.tex linguist-language=R
