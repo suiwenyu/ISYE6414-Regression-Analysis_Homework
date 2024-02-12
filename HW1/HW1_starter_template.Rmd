@@ -1,0 +1,396 @@
+---
+title: "HW1 Peer Assessment"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Part A. ANOVA
+
+Additional Material: ANOVA tutorial
+
+<https://datascienceplus.com/one-way-anova-in-r/>
+
+Jet lag is a common problem for people traveling across multiple time zones, but people can gradually adjust to the new time zone since the exposure of the shifted light schedule to their eyes can resets the internal circadian rhythm in a process called "phase shift". Campbell and Murphy (1998) in a highly controversial study reported that the human circadian clock can also be reset by only exposing the back of the knee to light, with some hailing this as a major discovery and others challenging aspects of the experimental design. The table below is taken from a later experiment by Wright and Czeisler (2002) that re-examined the phenomenon. The new experiment measured circadian rhythm through the daily cycle of melatonin production in 22 subjects randomly assigned to one of three light treatments. Subjects were woken from sleep and for three hours were exposed to bright lights applied to the eyes only, to the knees only or to neither (control group). The effects of treatment to the circadian rhythm were measured two days later by the magnitude of phase shift (measured in hours) in each subject's daily cycle of melatonin production. A negative measurement indicates a delay in melatonin production, a predicted effect of light treatment, while a positive number indicates an advance.
+
+Raw data of phase shift, in hours, for the circadian rhythm experiment
+
+| Treatment | Phase Shift (hr)                                    |
+|:----------|:----------------------------------------------------|
+| Control   | 0.53, 0.36, 0.20, -0.37, -0.60, -0.64, -0.68, -1.27 |
+| Knees     | 0.73, 0.31, 0.03, -0.29, -0.56, -0.96, -1.61        |
+| Eyes      | -0.78, -0.86, -1.35, -1.48, -1.52, -2.04, -2.83     |
+
+## Question A1 - 3 pts
+
+Consider the following incomplete R output:
+
+|   Source   | Df  | Sum of Squares | Mean Squares | F-statistics | p-value |
+|:----------:|:---:|:--------------:|:------------:|:------------:|:-------:|
+| Treatments |  2  |     7.224      |    3.6122    |    7.289     |  0.004  |
+|   Error    | 19  |     9.415      |    0.496     |              |         |
+|   TOTAL    | 21  |     16.639     |              |              |         |
+
+Fill in the missing values in the analysis of the variance table.Note: Missing values can be calculated using the corresponding formulas provided in the lectures, or you can build the data frame in R and generate the ANOVA table using the aov() function. Either approach will be accepted.
+
+### Answer A1
+
+First, create the dataframe in R.
+
+```{r}
+# Create Three dataframes for three different treatments
+Control_df <- data.frame(Phase_Shift = c(0.53, 0.36, 0.20, -0.37, -0.60, -0.64, -0.68, -1.27), Treatments = "Control")
+
+Knees_df <- data.frame(Phase_Shift = c(0.73, 0.31, 0.03, -0.29, -0.56, -0.96, -1.61), Treatments = "Knees")
+
+Eyes_df <- data.frame(Phase_Shift = c(-0.78, -0.86, -1.35, -1.48, -1.52, -2.04, -2.83), Treatments = "Eyes")
+
+# merge the data into one dataframe
+Jet_Lag <- rbind(Control_df, Knees_df, Eyes_df)
+Jet_Lag$Treatments <-as.factor(Jet_Lag$Treatments)
+
+Jet_Lag
+```
+
+Then, calculate the table using aov() function.
+
+The final results are filled into the table of the original question.
+
+```{r}
+aov_model1 = aov(Phase_Shift ~ Treatments, data=Jet_Lag)
+summary(aov_model1)
+```
+
+## Question A2 - 3 pts
+
+Use $\mu_1$, $\mu_2$, and $\mu_3$ as notation for the three mean parameters and define these parameters clearly based on the context of the topic above (i.e. explain what $\mu_1$, $\mu_2$, and $\mu_3$ mean in words in the context of this problem). Find the estimates of these parameters.
+
+### Answer A2
+
+$\mu_1$ : The true mean of phase shift for the population of Control group
+
+$\mu_2$ : The true mean of phase shift for the population of Knees treatment group
+
+$\mu_3$ : The true mean of phase shift for the population of Eyes treatment group
+
+The estimates of these three parameters are:
+
+$\hat{\mu_1}$ = -0.3087
+
+$\hat{\mu_2}$ = -0.3357
+
+$\hat{\mu_3}$ = -1.551
+
+The calculations are as follows:
+
+```{r}
+# display the estimates of the mean of each Treatment group
+model.tables(aov_model1, type = "means")
+```
+
+## Question A3 - 5 pts
+
+Use the ANOVA table in Question A1 to answer the following questions:
+
+a.  **1 pts** Write the null hypothesis of the ANOVA $F$-test, $H_0$
+
+    **Answer:** $H_0$: $\mu_1$ = $\mu_2$ = $\mu_3$ = 0
+
+b.  **1 pts** Write the alternative hypothesis of the ANOVA $F$-test, $H_A$
+
+    **Answer:** Some means among $\mu_1$ , $\mu_2$ and $\mu_3$ are different
+
+c.  **1 pts** Fill in the blanks for the degrees of freedom of the ANOVA $F$-test statistic: $F$(\_\_\_\_, \_\_\_\_\_)
+
+    **Answer:** $F$( 2, 19)
+
+d.  **1 pts** What is the p-value of the ANOVA $F$-test?
+
+    **Answer:** p-value equals 0.004
+
+e.  **1 pts** According the the results of the ANOVA $F$-test, does light treatment affect phase shift? Use an $\alpha$-level of 0.05.
+
+    **Answer:** since p-value is smaller than 0.05 , light treatment statistically affects phase shift.
+
+# Part B. Simple Linear Regression
+
+We are going to use regression analysis to estimate the performance of CPUs based on the maximum number of channels in the CPU. This data set comes from the UCI Machine Learning Repository.
+
+The data file includes the following columns:
+
+-   *vendor*: vendor of the CPU
+-   *chmax*: maximum channels in the CPU
+-   *performance*: published relative performance of the CPU
+
+The data is in the file "machine.csv". To read the data in `R`, save the file in your working directory (make sure you have changed the directory if different from the R working directory) and read the data using the `R` function `read.csv()`.
+
+```{r}
+# Change work directory
+setwd("E:/Data")
+
+# Read in the data
+data = read.csv("machine.csv", head = TRUE, sep = ",")
+# Show the first few rows of data
+head(data, 3)
+```
+
+## Question B1: Exploratory Data Analysis - 9 pts
+
+a.  **3 pts** Use a scatter plot to describe the relationship between CPU performance and the maximum number of channels. Describe the general trend (direction and form). Include plots and R-code used.
+
+    **Answer:** from the scatter plot below, the relationship between CPU performance and the maximum number of channels is positive in general, but it seems that these two variables don't have a linear relationship. Also, the variance of CPU performance seems to increase as the maximum number of channels increases.
+
+```{r}
+# Your code here...
+plot(data$chmax, data$performance, xlab = "Channels", ylab = "Performance")
+```
+
+b.  **3 pts** What is the value of the correlation coefficient between *performance* and *chmax*? Please interpret the strength of the correlation based on the correlation coefficient.
+
+    **Answer:** the value of the correlation coefficient equals 0.6052093 , which indicates a moderate positive relationship between *performance* and *chmax .* However, the correlation coefficient is still not high enough to prove that there is a linear relationship between these two variables.
+
+```{r}
+# Your code here...
+cor(data$chmax, data$performance) 
+```
+
+c.  **2 pts** Based on this exploratory analysis, would you recommend a simple linear regression model for the relationship?
+
+    **Answer:** From the scatter plot above, the variance of *performance* seems to increase as the *chmax* increases. This indicates that the constant variance assumption may not hold for a simple linear regression. From the correlation coefficient above, the linear relationship assumption may also not hold for these two variables. Therefore, i would not recommend a simple linear regression model for the relationship.
+
+d.  **1 pts** Based on the analysis above, would you pursue a transformation of the data? *Do not transform the data.*
+
+    **Answer:** I would pursue a transformation of the data. By using Box-Cox transformation to the response variable, the issue of inconstant variance may be resolved. By doing a log() transformation (or some other types of transformations) to the independent variable, the linearity between these two variables may also be improved.
+
+## Question B2: Fitting the Simple Linear Regression Model - 11 pts
+
+Fit a linear regression model, named *model1*, to evaluate the relationship between performance and the maximum number of channels. *Do not transform the data.* The function you should use in R is:
+
+```{r}
+# Your code here...
+#Create the model
+model1 = lm(performance ~ chmax, data)
+
+#show the results
+summary(model1)
+
+#print our the estimates of parameters
+summary(model1)$coefficients
+summary(model1)$sigma^2
+```
+
+a.  **3 pts** What are the model parameters and what are their estimates?
+
+    **Answer:** The model parameters and their estimates are as follows:
+
+    $\beta_0$ : intercept of the linear model $\hat{\beta_0}$ = 37.225220
+
+    $\beta_1$: slope of the linear model $\hat{\beta_1}$ = 3.744088
+
+    $\sigma^{2}$: variance of the residuals $\hat{\sigma}$ = $128.3408^2$ = 16471.37
+
+b.  **2 pts** Write down the estimated simple linear regression equation.
+
+    **Answer:** $Performance$ = 37.225220 + 3.744088 $\times$ $chmax$
+
+c.  **2 pts** Interpret the estimated value of the $\beta_1$ parameter in the context of the problem.
+
+    **Answer:** For each unit increase in the maximum number of channels in the CPU, the CPU performance will increase by 3.744088 units.
+
+d.  **2 pts** Find a 95% confidence interval for the $\beta_1$ parameter. Is $\beta_1$ statistically significant at this level?
+
+    **Answer:** As calculated below, the 95% confidence interval of $\beta_1$ is (3.069251 , 4.418926).
+
+    Since $\hat{\beta_1}$ = 3.744088, which falls in this range, $\beta_1$ is statistically significant at this level.
+
+```{r}
+confint(model1, level=0.95)
+```
+
+a.  **2 pts** Is $\beta_1$ statistically significantly positive at an $\alpha$-level of 0.01? What is the approximate p-value of this test?
+
+    **Answer:** From the calculations below, $\beta_1$ is statistically positive at an $\alpha$-level of 0.01 , because the approximate p-value of the test is 0 (smaller than 0.01).
+
+    ```{r}
+    # run T test to see if beta 1 is statistically positive at an alpha level of 0.01
+    tvalue <- summary(model1)$coefficients["chmax",3]
+    print("T value: ")
+    print(tvalue)
+
+    print("P value: ")
+    p_value = 1- pt(tvalue, 207)
+    p_value
+    ```
+
+## Question B3: Checking the Assumptions of the Model - 8 pts
+
+Create and interpret the following graphs with respect to the assumptions of the linear regression model. In other words, comment on whether there are any apparent departures from the assumptions of the linear regression model. Make sure that you state the model assumptions and assess each one. Each graph may be used to assess one or more model assumptions.
+
+a.  **2 pts** Scatterplot of the data with *chmax* on the x-axis and *performance* on the y-axis
+
+```{r}
+# Your code here...
+plot(data$chmax, data$performance, xlab = "chmax", ylab = "performance")
+```
+
+**Model Assumption(s) it checks:** Linearity assumption & constant variance assumption.
+
+In the scatter plot above, there is no clear evidence that the two variables have a linear relationship. Also, it looks that the variance of $performance$ gets larger as $chmax$ increases. Therefore, the constant variance assumption may also not hold.
+
+**Interpretation:**
+
+b.  **3 pts** Residual plot - a plot of the residuals, $\hat\epsilon_i$, versus the fitted values, $\hat{y}_i$
+
+```{r}
+# Your code here...
+plot(model1$fitted, model1$residuals)
+```
+
+**Model Assumption(s) it checks:** independence & constant variance
+
+**Interpretation:** The constant variance assumption obviously doesn't hold, since the residuals spread wider as the fitted value increases. In other words, the variance of the residuals gets larger as the fitted value increases.
+
+The independence assumption may also not hold, since it looks that the data are divided into some clusters in the chart above. That means there may be some correlations between the residuals. However, the pattern of the clusters is not very obvious - it may require some more investigations to determine if the independence assumption holds.
+
+c.  **3 pts** Histogram and q-q plot of the residuals
+
+```{r}
+# Your code here...
+library(car); 
+hist(model1$residuals, breaks = 20)
+qqPlot(model1$residuals)
+
+```
+
+**Model Assumption(s) it checks:** Normality
+
+**Interpretation:** Based on the charts above, the normality assumption doesn't hold. In the histogram, we can see that most of the residuals are distributed at the center of the histogram, which means we may have a light-tailed distribution.
+
+In the QQ plot, we can see that some residuals depart from the straight line at both ends, which also confirms that the normality assumption does not hold.
+
+## Question B4: Improving the Fit - 10 pts
+
+a.  **2 pts** Use a Box-Cox transformation (`boxCox()`) in `car()` package or (`boxcox()`) in `MASS()` package to find the optimal $\lambda$ value rounded to the nearest half integer. What transformation of the response, if any, does it suggest to perform?
+
+    **Answer:** from the calculations below, we can find that the optimal lambda equals -0.1010101
+
+    If this value is rounded to the nearest half integer, we get the optimal $\lambda$ = 0 , which means we need to transform $performace$ (response variable) to $log(performance)$
+
+```{r}
+# Your code here...
+library(MASS)
+bc <- boxcox(model1)
+
+# Find Optimal Lambda
+lambda <- bc$x[which.max(bc$y)]
+lambda
+```
+
+b.  **2 pts** Create a linear regression model, named *model2*, that uses the log transformed *performance* as the response, and the log transformed *chmax* as the predictor. Note: The variable *chmax* has a couple of zero values which will cause problems when taking the natural log. Please add one to the predictor before taking the natural log of it
+
+```{r}
+# Your code here...
+model2 <- lm(log(performance) ~ log(chmax + 1), data = data)
+summary(model2)
+```
+
+c.  **2 pts** Compare the R-squared values of *model1* and *model2*. Did the transformation improve the explanatory power of the model?
+
+    **Answer:** As shown below, the R-squared value of model 1 is 0.3662783 , and the R-squared value of model 2 is 0.4102926
+
+    Since the R-squared value is increased, the transformation improved the explanatory power of the model.
+
+    ```{r}
+    print("R squared of model 1:")
+    summary(model1)$r.squared
+
+    print("R squared of model 2:")
+    summary(model2)$r.squared
+    ```
+
+d.  **4 pts** Similar to Question B3, assess and interpret all model assumptions of *model2*. A model is considered a good fit if all assumptions hold. Based on your interpretation of the model assumptions, is *model2* a good fit?
+
+    **Answer:**
+
+    1.  From the scatter plot of $log(performance)$ and $log(chamax+1)$, we can observe that the linear relationship between the these two variables is much stronger.
+    2.  From the scatter plot of the fitted values and residuals, we can observe that the residuals spread randomly (without obvious patterns) around 0. This indicates that the constant variance assumption and normality assumption hold.
+    3.  After doing log transformations to both $performace$ and $chmax$, we obtained a more symmetric histogram. In the QQ plot, there are also fewer deviations of the residuals from the straight line. This means that the normality assumption holds.
+
+    In conclusion, model 2 is a good fit.
+
+```{r}
+# Your code here...
+plot(log(data$chmax+1), log(data$performance), xlab = "log(chmax)", ylab = "log(performance)")
+plot(model2$fitted, model2$residuals)
+hist(model2$residuals, breaks = 20)
+qqPlot(model2$residuals)
+```
+
+## Question B5: Prediction - 3 pts
+
+Suppose we are interested in predicting CPU performance when `chmax = 128`. Please make a prediction using both *model1* and *model2* and provide the 95% prediction interval of each prediction on the original scale of the response, *performance*. What observations can you make about the result in the context of the problem?
+
+**Answer:** From the calculations below, the predicted CPU performance of model 1 is 516.4685. The 95% prediction interval is (252.2519 , 780.6851). The predicted CPU performance of model 2 is 277.723. The 95% prediction interval is (55.17907 , 1397.813)
+
+From the results, we can see that the 95% prediction interval of model 2 is much wider than the 95% prediction interval of model 1. The predicted value of model 2 is also much lower than the predicted value of model 1. Also, either model 1 or model 2's predicted value falls into the 95% prediction interval of the other model.
+
+```{r}
+# Your code here...
+#create new data frame for prediction
+newdata = data.frame(chmax = 128)
+newdata
+
+#make prediction using model1
+print("Model1: ")
+predict(model1, newdata, interval = "prediction")
+print("-------------------------------------------------------")
+
+#make prediction using model2
+print("Model2: ")
+exp(predict(model2, newdata, interval = "prediction"))
+```
+
+# Part C. ANOVA - 8 pts
+
+We are going to continue using the CPU data set to analyse various vendors in the data set. There are over 20 vendors in the data set. To simplify the task, we are going to limit our analysis to three vendors, specifically, honeywell, hp, and nas. The code to filter for those vendors is provided below.
+
+```{r}
+# Filter for honeywell, hp, and nas
+data2 = data[data$vendor %in% c("honeywell", "hp", "nas"), ]
+data2$vendor = factor(data2$vendor)
+```
+
+1.  **2 pts** Using `data2`, create a boxplot of *performance* and *vendor*, with *performance* on the vertical axis. Interpret the plots.
+
+```{r}
+# Your code here...
+boxplot(performance ~ vendor, data = data2, xlab = "vendor", ylab = "performance")
+```
+
+2.  **3 pts** Perform an ANOVA F-test on the means of the three vendors. Using an $\alpha$-level of 0.05, can we reject the null hypothesis that the means of the three vendors are equal? Please interpret.
+
+    **Answer:** From the calculations below, the P value of the F test equals 0.00553, which is smaller than 0.05 . Therefore, we can reject the null hypothesis and conclude that the mean CPU performance of at least one vendor is different from the mean CPU performance of the other two vendors.
+
+```{r}
+# Your code here...
+model <- aov(performance ~ vendor, data = data2)
+summary(model)
+```
+
+3.  **3 pts** Perform a Tukey pairwise comparison between the three vendors. Using an $\alpha$-level of 0.05, which means are statistically significantly different from each other?
+
+    **Answer:** From the results below, we can see that *nas-honeywell* and *nas-hp* have intervals that don't include zero. The p values of these two pairs are also smaller than 0.05.
+
+    Therefore, we can conclude that the mean CPU performance of nas is statistically different from the mean CPU performance of honeywell and hp.
+
+    The p value of the other pair, *hp-honeywell*, is larger than 0.05. Therefore, we can not conclude that the means of these two vendors are statistically different from each other.
+
+```{r}
+# Your code here...
+TukeyHSD(model)
+```

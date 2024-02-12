@@ -1,0 +1,126 @@
+---
+title: "HW5 multiple choice"
+author: "Nick Sui"
+date: "2023-04-14"
+output: html_document
+---
+
+```{r}
+
+# Ensure that the sampling type is correct
+RNGkind(sample.kind="Rejection")
+
+# Reading the data: 
+data = read.csv("E:/Data/GA_EDVisits.csv",header=TRUE) 
+data = na.omit(data)
+
+# Get names of the column 
+names = colnames(data) 
+attach(data)
+
+# Standardized predictors - use these variables in your modeling in addition to the predictors A5.9, A10.14
+sAvgDistS = scale(log(SpecDist)) 
+sAvgDistP = scale(log(PedDist))
+sMedianIncome = scale(MedianIncome) 
+sNumHospitals = scale(No.Hospitals)
+sPercentLessHS = scale(PercentLessHS) 
+sPercentHS = scale(PercentHS)
+
+# Define interaction terms
+DistA5.9 = sAvgDistS*A5.9 
+DistA10.14 = sAvgDistS* A10.14
+DistIncome = sAvgDistS*sMedianIncome 
+DistLessHS = sAvgDistS*sPercentLessHS
+DistHS = sAvgDistS*sPercentHS 
+DistPA5.9 = sAvgDistP*A5.9
+DistPA10.14 = sAvgDistP* A10.14 
+DistPIncome = sAvgDistP*sMedianIncome
+DistPLessHS = sAvgDistP*sPercentLessHS 
+DistPHS = sAvgDistP*sPercentHS
+
+# Define final data frame
+X = data.frame(A5.9, A10.14, sAvgDistS, sAvgDistP, sMedianIncome,sPercentLessHS,sPercentHS, sNumHospitals,DistA5.9, DistA10.14, DistIncome,DistLessHS, DistHS, DistPA5.9, DistPA10.14, DistPIncome,DistPLessHS, DistPHS)
+
+# Set Seed to 100
+set.seed(100)
+```
+
+```{r}
+data
+```
+
+```{r}
+model1 <- glm(ED.visits ~ A5.9 + A10.14 + 
+                sAvgDistS + 
+                sAvgDistP +
+                sMedianIncome +
+                sNumHospitals +
+                sPercentLessHS +
+                sPercentHS, family = "poisson")
+
+model2 <- glm(ED.visits ~ A5.9 + A10.14 + 
+                sAvgDistS + 
+                sAvgDistP +
+                sMedianIncome +
+                sNumHospitals +
+                sPercentLessHS +
+                sPercentHS +
+                DistA5.9 +
+                DistA10.14 +
+                DistIncome +
+                DistLessHS +
+                DistHS +
+                DistPA5.9 +
+                DistPA10.14 +
+                DistPIncome +
+                DistPLessHS +
+                DistPHS 
+              , family = "poisson")
+
+```
+
+```{r}
+summary(model1)
+```
+
+```{r}
+summary(model2)
+```
+
+```{r}
+forward <- step(model1, scope=list(lower=model1, upper=model2),
+                direction="both")
+summary(forward)
+```
+
+```{r}
+#install.packages("glmnet")
+library(glmnet) 
+set.seed(100)
+
+satmodel.cv=cv.glmnet(as.matrix(X), ED.visits, family = "poisson",                      alpha=1, nfolds=10, type ="deviance")
+
+satmodel = glmnet(as.matrix(X), ED.visits, family = "poisson", 
+                  alpha = 1, nlambda=100)
+
+satmodel.cv$lambda.min
+coef(satmodel, s = satmodel.cv$lambda.min)
+
+```
+
+```{r}
+#install.packages("lars")
+library(lars)
+object = lars(x= as.matrix(X), y=ED.visits)
+object
+```
+
+```{r}
+
+plot(satmodel, xvar="lambda", lwd=2)
+abline(v=log(satmodel.cv$lambda.min), col='black', lty=2, lwd=2)
+```
+
+```{r}
+coef(satmodel, s = satmodel.cv$lambda.min)
+```
